@@ -43,5 +43,5 @@ install(TARGETS openid
 
 install(FILES
     global.hpp
-    rpc.hpp
+    server.hpp
     DESTINATION ${OPENID_INSTALL_DESTINATION_INCLUDE}/libopenid)
