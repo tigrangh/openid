@@ -2,6 +2,7 @@ module OpenIDMessage
 {
     class Wow
     {
+        String data
     }
 
     class ServerError

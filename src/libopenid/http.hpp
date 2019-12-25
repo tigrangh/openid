@@ -22,10 +22,10 @@ string response(beltpp::detail::session_special_data& ssd,
 }
 
 template <beltpp::detail::pmsg_all (*fallback_message_list_load)(
-        std::string::const_iterator&,
-        std::string::const_iterator const&,
-        beltpp::detail::session_special_data&,
-        void*)>
+          std::string::const_iterator&,
+          std::string::const_iterator const&,
+          beltpp::detail::session_special_data&,
+          void*)>
 beltpp::detail::pmsg_all message_list_load(
         std::string::const_iterator& iter_scan_begin,
         std::string::const_iterator const& iter_scan_end,
@@ -89,8 +89,8 @@ beltpp::detail::pmsg_all message_list_load(
         ssd.autoreply.clear();
 
         if (pss->type == beltpp::http::detail::scan_status::post &&
-                pss->resource.path.size() == 1 &&
-                pss->resource.path.front() == "api")
+            pss->resource.path.size() == 1 &&
+            pss->resource.path.front() == "api")
         {
             std::string::const_iterator iter_scan_begin_temp = posted.cbegin();
             std::string::const_iterator const iter_scan_end_temp = posted.cend();
@@ -121,7 +121,8 @@ beltpp::detail::pmsg_all message_list_load(
         }
         else
         {
-            ssd.session_specal_handler = nullptr;
+            auto p = ::beltpp::new_void_unique_ptr<OpenIDMessage::Wow>();
+            OpenIDMessage::Wow& ref = *reinterpret_cast<OpenIDMessage::Wow*>(p.get());
 
             string message("noo! \r\n");
 
@@ -135,17 +136,13 @@ beltpp::detail::pmsg_all message_list_load(
             for (auto const& prop : pss->resource.properties)
                 message += (prop.first + ": " + prop.second + "\r\n");
             message += "that's an error! \r\n";
-            message += "here's the protocol, by the way \r\n";
 
-            ssd.autoreply = beltpp::http::http_not_found(ssd,
-                                                         message +
-                                                         OpenIDMessage::detail::storage_json_schema());
+            ref.data = message;
 
             ssd.ptr_data = beltpp::t_unique_nullptr<beltpp::detail::iscan_status>();
-
-            return ::beltpp::detail::pmsg_all(size_t(-1),
-                                              ::beltpp::void_unique_nullptr(),
-                                              nullptr);
+            return ::beltpp::detail::pmsg_all(OpenIDMessage::Wow::rtt,
+                                              std::move(p),
+                                              &OpenIDMessage::Wow::pvoid_saver);
         }
     }
 }

@@ -97,14 +97,25 @@ bool server::run()
                 {
                     beltpp::isocket_open_refused msg;
                     received_packet.get(msg);
-                    //m_pimpl->writeln_rpc_warning(msg.reason + ", " + peerid);
+                    //m_pimpl->writeln_server_warning(msg.reason + ", " + peerid);
                     break;
                 }
                 case beltpp::isocket_open_error::rtt:
                 {
                     beltpp::isocket_open_error msg;
                     received_packet.get(msg);
-                    //m_pimpl->writeln_rpc_warning(msg.reason + ", " + peerid);
+                    //m_pimpl->writeln_server_warning(msg.reason + ", " + peerid);
+                    break;
+                }
+                case OpenIDMessage::Wow::rtt:
+                {
+                    OpenIDMessage::Wow msg;
+                    std::move(received_packet).get(msg);
+
+                    m_pimpl->writeln_server(msg.data);
+                    msg.data.clear();
+
+                    psk->send(peerid, beltpp::packet(std::move(msg)));
                     break;
                 }
                 default:
