@@ -4,13 +4,12 @@ add_executable(openidd
 
 # libraries this module links to
 target_link_libraries(openidd PRIVATE
-    storage_utility
     socket
-    publiq.pp
+    openid.hpp
+    openid
     mesh.pp
     systemutility
     belt.pp
-    blockchain
     utility
     cryptoutility
     log

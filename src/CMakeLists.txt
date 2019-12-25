@@ -35,7 +35,9 @@ if(NOT TARGET mesh.pp)
 add_subdirectory(mesh.pp)
 endif()
 
+add_subdirectory(libopenid)
 add_subdirectory(openidd)
+add_subdirectory(openid.hpp)
 
 # following is used for find_package functionality
 install(FILES openid-config.cmake DESTINATION ${OPENID_INSTALL_DESTINATION_LIBRARY})

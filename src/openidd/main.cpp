@@ -9,7 +9,7 @@
 #include <mesh.pp/settings.hpp>
 #include <mesh.pp/pid.hpp>
 
-#include <publiq.pp/storage_utility_rpc.hpp>
+#include <openid.hpp/server>
 
 #include <boost/program_options.hpp>
 #include <boost/locale.hpp>
@@ -37,22 +37,21 @@ using std::vector;
 using std::runtime_error;
 
 bool process_command_line(int argc, char** argv,
-                            std::string& prefix,
-                            beltpp::ip_address& rpc_bind_to_address,
-                            string& data_directory);
+                          beltpp::ip_address& server_bind_to_address,
+                          string& data_directory);
 
 static bool g_termination_handled = false;
-static storage_utility::rpc* g_prpc = nullptr;
+static openid::server* g_pserver = nullptr;
 
 void termination_handler(int /*signum*/)
 {
     g_termination_handled = true;
-    if (g_prpc)
-        g_prpc->wake();
+    if (g_pserver)
+        g_pserver->wake();
 }
 
-template <typename RPC>
-void loop(RPC& rpc, beltpp::ilog_ptr& plogger_exceptions, bool& termination_handled);
+template <typename SERVER>
+void loop(SERVER& server, beltpp::ilog_ptr& plogger_exceptions, bool& termination_handled);
 
 int main(int argc, char** argv)
 {
@@ -65,20 +64,18 @@ int main(int argc, char** argv)
     catch (...)
     {}  //  don't care for exception, for now
     //
-    meshpp::settings::set_application_name("storage_helper");
+    meshpp::settings::set_application_name("openidd");
     meshpp::settings::set_data_directory(meshpp::config_directory_path().string());
 
-    beltpp::ip_address rpc_bind_to_address;
+    beltpp::ip_address server_bind_to_address;
     string data_directory;
-    string prefix;
 
     if (false == process_command_line(argc, argv,
-                                      prefix,
-                                      rpc_bind_to_address,
+                                      server_bind_to_address,
                                       data_directory))
         return 1;
 
-    meshpp::config::set_public_key_prefix(prefix);
+    //meshpp::config::set_public_key_prefix(prefix);
 
     if (false == data_directory.empty())
         meshpp::settings::set_data_directory(data_directory);
@@ -113,21 +110,20 @@ int main(int argc, char** argv)
 
         auto fs_log = meshpp::data_directory_path("log");
 
-        if (false == rpc_bind_to_address.local.empty())
-            cout << "rpc interface: " << rpc_bind_to_address.to_string() << endl;
+        if (false == server_bind_to_address.local.empty())
+            cout << "server interface: " << server_bind_to_address.to_string() << endl;
 
-        beltpp::ilog_ptr plogger_rpc = beltpp::console_logger("storage_helper_rpc", true);
-        //plogger_rpc->disable();
-        plogger_exceptions = meshpp::file_logger("storage_helper_exceptions",
+        beltpp::ilog_ptr plogger_server = beltpp::console_logger("openidd_server", true);
+        //plogger_server->disable();
+        plogger_exceptions = meshpp::file_logger("openidd_exceptions",
                                                  fs_log / "exceptions.txt");
-        //__debugbreak();
 
-        storage_utility::rpc rpc(rpc_bind_to_address,
-                                 plogger_rpc.get());
+        openid::server server(server_bind_to_address,
+                              plogger_server.get());
 
-        g_prpc = &rpc;
+        g_pserver = &server;
 
-        loop(rpc, plogger_exceptions, g_termination_handled);
+        loop(server, plogger_exceptions, g_termination_handled);
 
         dda->history.back().end.tm = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
         dda.save();
@@ -195,23 +191,20 @@ void loop(RPC& rpc, beltpp::ilog_ptr& plogger_exceptions, bool& termination_hand
 }
 
 bool process_command_line(int argc, char** argv,
-                          std::string& prefix,
-                          beltpp::ip_address& rpc_bind_to_address,
+                          beltpp::ip_address& server_bind_to_address,
                           string& data_directory)
 {
-    string rpc_local_interface;
+    string server_local_interface;
     vector<string> hosts;
     program_options::options_description options_description;
     try
     {
         auto desc_init = options_description.add_options()
             ("help,h", "Print this help message and exit.")
-            ("rpc_local_interface,r", program_options::value<string>(&rpc_local_interface),
-                            "(rpc) The local network interface and port to bind to")
-            ("data_directory,d", program_options::value<string>(&data_directory),
-                            "Data directory path")
-            ("prefix,p", program_options::value<string>(&prefix)->required(),
-                            "blockchain prefix");
+            ("server-local-interface,l", program_options::value<string>(&server_local_interface)->required(),
+                            "network interface and port to listen for requests")
+            ("data-directory,d", program_options::value<string>(&data_directory),
+                            "Data directory path");
         (void)(desc_init);
 
         program_options::variables_map options;
@@ -227,11 +220,12 @@ bool process_command_line(int argc, char** argv,
             throw std::runtime_error("");
         }
 
-        if (false == rpc_local_interface.empty())
-            rpc_bind_to_address.from_string(rpc_local_interface);
+        if (false == server_local_interface.empty())
+            server_bind_to_address.from_string(server_local_interface);
 
-        if (rpc_local_interface.empty())
-            throw std::runtime_error("rpc_local_interface is not specified");
+        if (server_bind_to_address.remote.empty() &&
+            server_bind_to_address.local.empty())
+            throw std::runtime_error("server_local_interface is not specified");
     }
     catch (std::exception const& ex)
     {

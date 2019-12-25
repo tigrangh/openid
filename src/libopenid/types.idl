@@ -1,0 +1,12 @@
+module OpenIDMessage
+{
+    class Wow
+    {
+    }
+
+    class ServerError
+    {
+        String message
+    }
+}
+////1

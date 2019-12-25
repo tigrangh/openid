@@ -1,0 +1,7 @@
+CMakeLists.txt.user
+/src/libopenid/types.gen.hpp
+/.vs
+/.vscode
+/build
+/CMakeSettings.json
+*.DS_Store
